@@ -1,0 +1,562 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  A highly available and scalable LAMP stack, using Amazon RDS. The script will
+  retrieve the application source code from a chosen private Github repository
+  and creates a config.php file using the given database credentials.
+Parameters:
+  VpcId:
+    Type: 'AWS::EC2::VPC::Id'
+    Description: VpcId of your existing Virtual Private Cloud (VPC).
+    ConstraintDescription: must be the VPC Id of an existing Virtual Private Cloud.
+  Subnets:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Description: The list of SubnetIds in your Virtual Private Cloud (VPC).
+    ConstraintDescription: >-
+      must be a list of at least two existing subnets associated with at least
+      two different availability zones. They should be residing in the selected
+      Virtual Private Cloud.
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instances.
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  DBName:
+    Default: myDatabase
+    Description: MySQL database name.
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBUser:
+    NoEcho: 'true'
+    Description: Username for MySQL database access.
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+  DBPassword:
+    NoEcho: 'true'
+    Description: Password for MySQL database access.
+    Type: String
+    MinLength: '8'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+  DBAllocatedStorage:
+    Default: '5'
+    Description: The size of the database (Gb).
+    Type: Number
+    MinValue: '5'
+    MaxValue: '1024'
+    ConstraintDescription: must be between 5 and 1024Gb.
+  DBInstanceClass:
+    Description: The database instance type.
+    Type: String
+    Default: db.t2.small
+    AllowedValues:
+      - db.t1.micro
+      - db.t2.micro
+      - db.t2.small
+      - db.t2.medium
+      - db.t2.large
+    ConstraintDescription: must select a valid database instance type.
+  MultiAZDatabase:
+    Default: 'true'
+    Description: Create a Multi-AZ MySQL Amazon RDS database instance.
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    ConstraintDescription: must be either true or false.
+  WebServerCapacity:
+    Default: '2'
+    Description: The initial number of WebServer instances.
+    Type: Number
+    MinValue: '1'
+    MaxValue: '5'
+    ConstraintDescription: must be between 1 and 5 EC2 instances.
+  InstanceType:
+    Description: WebServer EC2 instance type.
+    Type: String
+    Default: t2.small
+    AllowedValues:
+      - t1.micro
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+    ConstraintDescription: must be a valid EC2 instance type.
+  SSHLocation:
+    Description: The IP address range that can be used to SSH to the EC2 instances.
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  MySQLClientLocation:
+    Description: The IP address range that can be used to connect to the MySQL database.
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  GithubUsername:
+    Description: GitHub username.
+    Type: String
+  GithubPassword:
+    NoEcho: 'true'
+    Description: GitHub password (or token).
+    Type: String
+  GithubRepo:
+    Description: Name of GitHub repository with application source code.
+    Type: String
+Mappings:
+  AWSInstanceType2Arch:
+    t1.micro:
+      Arch: HVM64
+    t2.nano:
+      Arch: HVM64
+    t2.micro:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+  AWSInstanceType2NATArch:
+    t1.micro:
+      Arch: NATHVM64
+    t2.nano:
+      Arch: NATHVM64
+    t2.micro:
+      Arch: NATHVM64
+    t2.small:
+      Arch: NATHVM64
+    t2.medium:
+      Arch: NATHVM64
+    t2.large:
+      Arch: NATHVM64
+  AWSRegionArch2AMI:
+    eu-west-1:
+      HVM64: ami-015232c01a82b847b
+      HVMG2: ami-0d5299b1c6112c3c7
+    eu-west-2:
+      HVM64: ami-0765d48d7e15beb93
+      HVMG2: NOT_SUPPORTED
+    eu-west-3:
+      HVM64: ami-0caf07637eda19d9c
+      HVMG2: NOT_SUPPORTED
+Resources:
+  ApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Subnets: !Ref Subnets
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 227da82e-8590-4a83-9998-96840bdfcd4d
+  ALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: '80'
+      Protocol: HTTP
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 6fe6d73b-a7ff-4ade-b755-6e6aa6eac676
+  ALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId: !Ref VpcId
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: 'true'
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: '30'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 58bb32ef-19bb-44e9-982c-4c745d961c12
+  WebServerGroup:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties:
+      VPCZoneIdentifier: !Ref Subnets
+      LaunchConfigurationName: !Ref LaunchConfig
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: !Ref WebServerCapacity
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT5M
+        Count: !Ref WebServerCapacity
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        MinInstancesInService: '1'
+        MaxBatchSize: '1'
+        PauseTime: PT7M
+        WaitOnResourceSignals: 'true'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 0c005251-7024-4a69-8d3d-7f5cb62e18b8
+  LaunchConfig:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Metadata:
+      'AWS::CloudFormation::Authentication':
+        GithubCredentials:
+          type: basic
+          username: !Ref GithubUsername
+          password: !Ref GithubPassword
+          uris:
+            - github.com
+      Comment1: Configure the bootstrap helpers to install the Apache Web Server and PHP
+      'AWS::CloudFormation::Init':
+        config:
+          packages:
+            yum:
+              httpd: []
+              php: []
+              php-mysql: []
+          sources:
+            /var/www/html: !Join 
+              - /
+              - - 'https://github.com'
+                - !Ref GithubUsername
+                - !Ref GithubRepo
+                - tarball/main
+          files:
+            /var/www/html/config.php:
+              content: !Join 
+                - ''
+                - - |2
+                        <?php
+                  - '      $Database   = "'
+                  - !GetAtt 
+                    - MySQLDatabase
+                    - Endpoint.Address
+                  - |
+                    ";
+                  - '      $DBName     = "'
+                  - !Ref DBName
+                  - |
+                    ";
+                  - '      $DBUser     = "'
+                  - !Ref DBUser
+                  - |
+                    ";
+                  - '      $DBPassword = "'
+                  - !Ref DBPassword
+                  - |
+                    ";
+                  - |2
+                          $link = mysqli_connect($Database, $DBUser, $DBPassword, $DBName)
+                  - |2
+                          if($link === false);
+                  - |2
+                          {
+                  - |2
+                               die("ERROR: Could not connect. " . mysqli_connect_error());
+                  - |2
+                          }
+                  - |2
+                        ?>
+              mode: '000600'
+              owner: apache
+              group: apache
+            /etc/cfn/cfn-hup.conf:
+              content: !Join 
+                - ''
+                - - |
+                    [main]
+                  - stack=
+                  - !Ref 'AWS::StackId'
+                  - |+
+
+                  - region=
+                  - !Ref 'AWS::Region'
+                  - |+
+
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Join 
+                - ''
+                - - |
+                    [cfn-auto-reloader-hook]
+                  - |
+                    triggers=post.update
+                  - >
+                    path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
+                  - 'action=/opt/aws/bin/cfn-init -v '
+                  - '         --stack '
+                  - !Ref 'AWS::StackName'
+                  - '         --resource LaunchConfig '
+                  - '         --region '
+                  - !Ref 'AWS::Region'
+                  - |+
+
+                  - |
+                    runas=root
+              mode: '000400'
+              owner: root
+              group: root
+          services:
+            sysvinit:
+              httpd:
+                enabled: 'true'
+                ensureRunning: 'true'
+              cfn-hup:
+                enabled: 'true'
+                ensureRunning: 'true'
+                files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+      'AWS::CloudFormation::Designer':
+        id: 7f3c644d-e9e5-438b-8027-39d1af46cefc
+    Properties:
+      ImageId: !FindInMap 
+        - AWSRegionArch2AMI
+        - !Ref 'AWS::Region'
+        - !FindInMap 
+          - AWSInstanceType2Arch
+          - !Ref InstanceType
+          - Arch
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref WebServerSecurityGroup
+      KeyName: !Ref KeyName
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              yum update -y aws-cfn-bootstrap
+            - |
+              # Install the files and packages from the metadata
+            - '/opt/aws/bin/cfn-init -v '
+            - '         --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource LaunchConfig '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+            - |
+              # Signal the status from cfn-init
+            - '/opt/aws/bin/cfn-signal -e $? '
+            - '         --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource WebServerGroup '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+
+
+  WebServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 locked down to the ELB and SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: !Select 
+            - 0
+            - !GetAtt 
+              - ApplicationLoadBalancer
+              - SecurityGroups
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SSHLocation
+      VpcId: !Ref VpcId
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7ee37cbc-aa07-4489-9d01-4fb76f68b483
+  ALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      VpcId: !Ref VpcId
+      GroupDescription: Enable HTTP access via port 80
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 18a5f20a-aa05-4450-b361-cfd6919d159b
+  DBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Open database for access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: !Ref WebServerSecurityGroup
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          CidrIp: !Ref MySQLClientLocation
+      VpcId: !Ref VpcId
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 9b896fc1-77b1-42b0-b3b8-76006d328c2c
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: A subnet group is required to specify the DB VPC.
+      SubnetIds: !Ref Subnets
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 07353bd9-ea60-4ad3-974e-4f9025919735
+  MySQLDatabase:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      Engine: MySQL
+      DBName: !Ref DBName
+      MultiAZ: !Ref MultiAZDatabase
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: 'true'
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref DBAllocatedStorage
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 3b1707b5-ff6f-4b7f-b8d5-fd10195aa352
+    DependsOn:
+      - DBSubnetGroup
+Outputs:
+  WebsiteURL:
+    Description: URL for newly created LAMP stack
+    Value: !Join 
+      - ''
+      - - 'http://'
+        - !GetAtt 
+          - ApplicationLoadBalancer
+          - DNSName
+Metadata:
+  'AWS::CloudFormation::Designer':
+    58bb32ef-19bb-44e9-982c-4c745d961c12:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 400
+        'y': 380
+      z: 1
+      embeds: []
+    227da82e-8590-4a83-9998-96840bdfcd4d:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 280
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - 18a5f20a-aa05-4450-b361-cfd6919d159b
+    7ee37cbc-aa07-4489-9d01-4fb76f68b483:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 200
+        'y': 280
+      z: 1
+      embeds: []
+    9b896fc1-77b1-42b0-b3b8-76006d328c2c:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 100
+        'y': 280
+      z: 1
+      embeds: []
+    3b1707b5-ff6f-4b7f-b8d5-fd10195aa352:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 100
+        'y': 380
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - 9b896fc1-77b1-42b0-b3b8-76006d328c2c
+      dependson:
+        - 07353bd9-ea60-4ad3-974e-4f9025919735
+    7f3c644d-e9e5-438b-8027-39d1af46cefc:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 200
+        'y': 380
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - 7ee37cbc-aa07-4489-9d01-4fb76f68b483
+    0c005251-7024-4a69-8d3d-7f5cb62e18b8:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 300
+        'y': 380
+      z: 1
+      embeds: []
+      isassociatedwith:
+        - 7f3c644d-e9e5-438b-8027-39d1af46cefc
+        - 58bb32ef-19bb-44e9-982c-4c745d961c12
+    6fe6d73b-a7ff-4ade-b755-6e6aa6eac676:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 400
+        'y': 280
+      z: 1
+      embeds: []
+    18a5f20a-aa05-4450-b361-cfd6919d159b:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 200
+        'y': 200
+      z: 1
+      embeds: []
+    07353bd9-ea60-4ad3-974e-4f9025919735:
+      size:
+        width: 100
+        height: 80
+      position:
+        x: -40
+        'y': 380
+      z: 1
+      embeds: []

@@ -1,0 +1,204 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      CidrBlock: 10.0.0.0/24
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 30975f51-cccc-4e7b-b764-ca497563d50d
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.0/25
+      AvailabilityZone: eu-west-2a
+      MapPublicIpOnLaunch: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: f2603525-9217-457c-a0d7-c34f3f0f8d1c
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.0.128/25
+      AvailabilityZone: eu-west-2b
+      MapPublicIpOnLaunch: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: a95e145c-19d9-4b5c-b62b-57d849fd58b8
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties: {}
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e041e6e5-0b38-4828-bbd3-8a238bc09bf8
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 150dff74-c371-484a-9dab-6f3cec92356e
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref PublicRouteTable
+      GatewayId: !Ref InternetGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: c8b703de-9381-464c-9491-45271d279859
+    DependsOn:
+      - InternetGateway
+  EC2VPCGH511:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 9de7368c-5d05-4d57-8194-53d7311f7780
+  EC2SRTATW22:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 19463d10-aa62-476e-a47c-37333d1efa7f
+  EC2SRTA1924F:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 9d2d0572-19f8-4db0-af5b-b244657a067a
+Metadata:
+  'AWS::CloudFormation::Designer':
+    30975f51-cccc-4e7b-b764-ca497563d50d:
+      size:
+        width: 400
+        height: 260
+      position:
+        x: -770
+        'y': 60
+      z: 1
+      embeds:
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+        - a95e145c-19d9-4b5c-b62b-57d849fd58b8
+        - f2603525-9217-457c-a0d7-c34f3f0f8d1c
+    f2603525-9217-457c-a0d7-c34f3f0f8d1c:
+      size:
+        width: 150
+        height: 90
+      position:
+        x: -740
+        'y': 210
+      z: 2
+      parent: 30975f51-cccc-4e7b-b764-ca497563d50d
+      embeds: []
+      iscontainedinside:
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+    a95e145c-19d9-4b5c-b62b-57d849fd58b8:
+      size:
+        width: 150
+        height: 90
+      position:
+        x: -550
+        'y': 210
+      z: 2
+      parent: 30975f51-cccc-4e7b-b764-ca497563d50d
+      embeds: []
+      iscontainedinside:
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+    e041e6e5-0b38-4828-bbd3-8a238bc09bf8:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: -350
+        'y': 60
+      z: 1
+      embeds: []
+    150dff74-c371-484a-9dab-6f3cec92356e:
+      size:
+        width: 140
+        height: 90
+      position:
+        x: -640
+        'y': 90
+      z: 2
+      parent: 30975f51-cccc-4e7b-b764-ca497563d50d
+      embeds:
+        - c8b703de-9381-464c-9491-45271d279859
+      iscontainedinside:
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+        - 30975f51-cccc-4e7b-b764-ca497563d50d
+    c8b703de-9381-464c-9491-45271d279859:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: -600
+        'y': 110
+      z: 3
+      parent: 150dff74-c371-484a-9dab-6f3cec92356e
+      embeds: []
+      iscontainedinside:
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+        - 150dff74-c371-484a-9dab-6f3cec92356e
+      dependson:
+        - e041e6e5-0b38-4828-bbd3-8a238bc09bf8
+    9de7368c-5d05-4d57-8194-53d7311f7780:
+      source:
+        id: 30975f51-cccc-4e7b-b764-ca497563d50d
+      target:
+        id: e041e6e5-0b38-4828-bbd3-8a238bc09bf8
+      z: 1
+    19463d10-aa62-476e-a47c-37333d1efa7f:
+      source:
+        id: 150dff74-c371-484a-9dab-6f3cec92356e
+      target:
+        id: a95e145c-19d9-4b5c-b62b-57d849fd58b8
+      z: 2
+    9d2d0572-19f8-4db0-af5b-b244657a067a:
+      source:
+        id: 150dff74-c371-484a-9dab-6f3cec92356e
+      target:
+        id: f2603525-9217-457c-a0d7-c34f3f0f8d1c
+      z: 2
