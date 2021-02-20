@@ -19,3 +19,11 @@ The file NetworkingComponents.yaml will create a new VPC with two subnets, into 
 ### Changes to the sample template
 To allow the script to run using the VPC & subnets created by NetworkingComponents.yaml, the following changes were made:
 - The database requires a subnet group to be specified to allow multi-AZ deployment. A subnet group was therefore added (DBSubnetGroup), consisting of whichever subnets had been chosen. 
+To allow the script to use application source code from a private GitHub repository, the following changes were made:
+- Added paramters for the user to enter their GitHub username, password / tocken and chosen repository (GithubUsername, GithubPassword, GithubRepo).
+- Added a AWS::CloudFormation::Authentication section within the LaunchConfig, to authenticate cfn to GitHub.
+- Added a source section to the LaunchConfig to import the GitHub code as a tarball.
+- Made a config.php file to be created within the LaunchConfig, to be used by the PHP application for connections to the database.
+### Other
+- I wanted to be able to connect the database via MySQL Workbench from my laptop to provide a GUI. To allow this, a security group ingress rule was added to DBSecurityGroup to allow connections over port 3306 from a given IP address (set by the MySQLClientLocation parameter) and the PublicAccessibility property for MySQLDatabase was set to true, without this property no connections can be made from outside the VPC.
+- Options for instance types and corresponding mappings were reduced for readability.
