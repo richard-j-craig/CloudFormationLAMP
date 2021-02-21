@@ -26,5 +26,5 @@ To allow the script to use application source code from a private GitHub reposit
 - Made a config.php file to be created within the LaunchConfig, to be used by the PHP application for connections to the database.
 ### Other
 - I wanted to be able to connect the database via MySQL Workbench from my laptop to provide a GUI. To allow this, a security group ingress rule was added to DBSecurityGroup to allow connections over port 3306 from a given IP address (set by the MySQLClientLocation parameter) and the PublicAccessibility property for MySQLDatabase was set to true, without this property no connections can be made from outside the VPC.
-  - MySQL Workbench can easily be used to import data from an existing database using an SQL dump file.
+ - MySQL Workbench can easily be used to import data from an existing database using an SQL dump file.
 - Options for instance types and corresponding mappings were reduced for readability.
