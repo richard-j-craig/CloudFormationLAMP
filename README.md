@@ -17,7 +17,7 @@ The file NetworkingComponents.yml will create a new VPC with two subnets, into w
 - The VPC required an InternetGateway and corresponding VPCGatewayAttachment to facilitate any connections over the internet.
 - A PublicRouteTable with a PublicRoute and corresponding subnet associations were required in order to provide internet connectivity for the subnets.
 
-<img align="center" width="300" height="auto" src="https://github.com/richrepos/CloudFormationLAMP/blob/main/reference-images/LAMPStack-diagram.png?raw=true">
+<p align="center"><img width="600" height="auto" src="https://github.com/richrepos/CloudFormationLAMP/blob/main/reference-images/LAMPStack-diagram.png?raw=true"></p>
 
 ### Changes to the sample template
 To allow the script to run using the VPC & subnets created by NetworkingComponents.yml, the following changes were made.
@@ -34,4 +34,4 @@ Other changes are listed below, along with a diagram of the stack created in Clo
   - MySQL Workbench can easily be used to import data from an existing database using an SQL dump file.
 - Options for instance types and corresponding mappings were reduced for readability.
 
-<img align="center" width="300" height="auto" src="https://github.com/richrepos/CloudFormationLAMP/blob/main/reference-images/NetworkingComponents-diagram.png?raw=true">
+<p align="center"><img align="center" width="600" height="auto" src="https://github.com/richrepos/CloudFormationLAMP/blob/main/reference-images/NetworkingComponents-diagram.png?raw=true"></p>
