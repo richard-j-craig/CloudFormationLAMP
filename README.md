@@ -17,7 +17,7 @@ The file NetworkingComponents.yml will create a new VPC with two subnets, into w
 - The VPC required an InternetGateway and corresponding VPCGatewayAttachment to facilitate any connections over the internet.
 - A PublicRouteTable with a PublicRoute and corresponding subnet associations were required in order to provide internet connectivity for the subnets.
 
-<p align="center"><img width="600" height="auto" src="https://github.com/richrepos/CloudFormationLAMP/blob/main/reference-images/NetworkingComponents-diagram.png.png?raw=true"></p>
+<p align="center"><img width="600" height="auto" src="https://github.com/richrepos/CloudFormationLAMP/blob/main/reference-images/NetworkingComponents-diagram.png?raw=true"></p>
 
 ### Changes to the sample template
 To allow the script to run using the VPC & subnets created by NetworkingComponents.yml, the following changes were made.
