@@ -4,7 +4,7 @@ However, this sample template is set up to deploy a PHP application into the def
 ## How to Use
 1. Run NetworkingComponents.yml script using AWS CloudFormation and wait for it to complete.
 2. Run the LAMPStack.yml script using AWS CloudFormation and fill in the required parameters.
-  - The name of a private GitHub repository containing the source code of your PHP application is required, along with your GitHub credentials to allow CloudFormation to pull the code. Note that a config.php file containing the database credentials is created by the script so should not be within the GitHub repository.
+  - The name of a private GitHub repository containing the source code of your PHP application is required, along with your GitHub credentials to allow CloudFormation to pull the code. Note that a config.php file containing the database credentials is created by the script so should not be within the GitHub repository. Other files querying the database should then reference this config file to make the connection.
   - Your local IP address should be given for both MySQLClientLocation and SSHLocation to limit connectivity.
 3. When the stack completes, navigate to 'Outputs' and use the provided URL to access the application.
 ## Key Developments
@@ -26,4 +26,5 @@ To allow the script to use application source code from a private GitHub reposit
 - Made a config.php file to be created within the LaunchConfig, to be used by the PHP application for connections to the database.
 ### Other
 - I wanted to be able to connect the database via MySQL Workbench from my laptop to provide a GUI. To allow this, a security group ingress rule was added to DBSecurityGroup to allow connections over port 3306 from a given IP address (set by the MySQLClientLocation parameter) and the PublicAccessibility property for MySQLDatabase was set to true, without this property no connections can be made from outside the VPC.
+  - MySQL Workbench can easily be used to import data from an existing database using an SQL dump file.
 - Options for instance types and corresponding mappings were reduced for readability.
