@@ -1,7 +1,7 @@
 ## Overview
 This repository consists of two YAML files that can be used in AWS CloudFormation to deploy a PHP application into a scalable and highly available (multi-AZ) LAMP stack, using an RDS managed database. The 'LAMP stack scalable and durable' template provided in the AWS documentation was used as a starting point and can be found here: [Application Frameworks](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/sample-templates-appframeworks-eu-west-2.html).
 However, this sample template is set up to deploy a PHP application into the default VPC and subnets, whereas I wanted to be able to use a custom VPC. I also wanted the script to retrieve the application source code from a private GitHub repository, rather than simply creating a sample index.php file. The steps taken to achieve this, are covered in the Key Developments section. Note that the code within the metadata sections for both YAML files was automatically created by CloudFormation and is only used to provide a graphic of the components in the visual designer.
-<img align="left" width="200" height="auto" href="http://lamp-appli-5xy13q02c2b-1193411039.eu-west-2.elb.amazonaws.com/website_images/front.png">
+<img align="left" width="200" height="auto" src="http://lamp-appli-5xy13q02c2b-1193411039.eu-west-2.elb.amazonaws.com/website_images/front.png">
 ## How to Use
 1. Run NetworkingComponents.yml script using AWS CloudFormation and wait for it to complete.
 2. Run the LAMPStack.yml script using AWS CloudFormation and fill in the required parameters.
